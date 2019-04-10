@@ -423,8 +423,23 @@ function queryExplore(skip) {
   ipc_send("request_explore", query);
 }
 
+function JSONAllDecks() {
+  var i;
+  for (i = 1; i <= 100; i++) {
+    queryExplore(i * 25);
+  }
+}
+
 function setExploreDecks(data) {
   console.log(data);
+  var fs = require("fs");
+  fs.writeFile("./analysis.json", JSON.stringify(data), err => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    console.log("File has been created");
+  });
   if (filterSkip == 0) {
     document.getElementById("explore_list").innerHTML = "";
   }
@@ -717,5 +732,6 @@ function open_course_request(courseId) {
 module.exports = {
   openExploreTab,
   setExploreDecks,
-  updateExploreCheckbox
+  updateExploreCheckbox,
+  JSONAllDecks
 };

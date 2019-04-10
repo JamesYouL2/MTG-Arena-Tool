@@ -38,6 +38,7 @@ const open_decks_tab = require("./decks").open_decks_tab;
 const open_history_tab = require("./history").open_history_tab;
 const openExploreTab = require("./explore").openExploreTab;
 const setExploreDecks = require("./explore").setExploreDecks;
+const JSONAllDecks = require("./explore").JSONAllDecks;
 const updateExploreCheckbox = require("./explore").updateExploreCheckbox;
 const openCollectionTab = require("./collection").openCollectionTab;
 const openEventsTab = require("./events").openEventsTab;
