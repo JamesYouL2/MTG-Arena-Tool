@@ -328,6 +328,7 @@ function openDeck(deck, deck_type) {
   } else {
     currentOpenDeck = deck;
   }
+  console.log(deck);
 
   // #ux_1 is right side, #ux_0 is left side
   let container = $("#ux_1");
