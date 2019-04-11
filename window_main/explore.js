@@ -429,7 +429,9 @@ function queryExplore(skip) {
 function JSONAllDecks(loopcounter, skipto = 0) {
   var i;
   for (i = 1; i <= loopcounter; i++) {
-    queryExplore(i * 25 + skipto);
+    setTimeout(function() {
+      queryExplore(i * 25 + skipto);
+    }, 3000);
   }
 }
 
@@ -600,6 +602,7 @@ function deckLoad(_deck, index) {
   });
 
   $("." + index).on("click", function() {
+    console.log(_deck);
     _deck.mainDeck = removeDuplicates(_deck.mainDeck).sort(compare_cards);
     _deck.sideboard = removeDuplicates(_deck.sideboard).sort(compare_cards);
     open_deck(_deck, 1);
@@ -734,12 +737,24 @@ function eventLoad(event, index) {
 
 function open_course_request(courseId) {
   showLoadingBars();
+  console.log(courseId);
   ipc_send("request_course", courseId);
 }
 
+function openAllDecks() {
+  var lineReader = require("readline").createInterface({
+    input: require("fs").createReadStream("./PythonScraping/deckids.txt")
+  });
+
+  lineReader.on("line", function(line) {
+    console.log(line);
+    ipc_send("request_course", line);
+  });
+}
 module.exports = {
   openExploreTab,
   setExploreDecks,
   updateExploreCheckbox,
-  JSONAllDecks
+  JSONAllDecks,
+  openAllDecks
 };

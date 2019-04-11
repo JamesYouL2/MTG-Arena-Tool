@@ -399,15 +399,14 @@ function openDeck(deck, deck_type) {
 
 function openalldecks() {
   var lineReader = require("readline").createInterface({
-    input: require("fs").createReadStream("./decks.txt")
+    input: require("fs").createReadStream("./PythonScraping/deckids.txt")
   });
 
   lineReader.on("line", function(line) {
-    openDeck(line, 2);
+    console.log(line);
   });
 }
 
 module.exports = {
-  open_deck: openDeck,
-  openalldecks: openalldecks
+  open_deck: openDeck
 };
