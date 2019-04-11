@@ -309,7 +309,9 @@ function deckStatsSection(deck, deck_type) {
     ).appendTo(costSection);
   });
   $(
-    `<div title="Aproximate boosters" class="wc_cost wc_booster">${Math.round(boosterCost)}</div>`
+    `<div title="Aproximate boosters" class="wc_cost wc_booster">${Math.round(
+      boosterCost
+    )}</div>`
   ).appendTo(costSection);
 
   costSection.appendTo(stats);
@@ -329,6 +331,14 @@ function openDeck(deck, deck_type) {
     currentOpenDeck = deck;
   }
   console.log(deck);
+  var fs = require("fs");
+  fs.appendFile("./decks.json", JSON.stringify(deck), { flags: "a" }, err => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+    console.log("File has been created");
+  });
 
   // #ux_1 is right side, #ux_0 is left side
   let container = $("#ux_1");
@@ -382,6 +392,17 @@ function openDeck(deck, deck_type) {
   });
 }
 
+function openalldecks() {
+  var lineReader = require("readline").createInterface({
+    input: require("fs").createReadStream("./decks.txt")
+  });
+
+  lineReader.on("line", function(line) {
+    openDeck(line, 2);
+  });
+}
+
 module.exports = {
-  open_deck: openDeck
+  open_deck: openDeck,
+  openalldecks: openalldecks
 };

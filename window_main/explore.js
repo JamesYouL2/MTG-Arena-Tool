@@ -101,7 +101,10 @@ function openExploreTab() {
 
   $(this).off();
   mainDiv.addEventListener("scroll", () => {
-    if (Math.round(mainDiv.scrollTop + mainDiv.offsetHeight) >= mainDiv.scrollHeight) {
+    if (
+      Math.round(mainDiv.scrollTop + mainDiv.offsetHeight) >=
+      mainDiv.scrollHeight
+    ) {
       queryExplore(filterSkip);
     }
   });
@@ -423,23 +426,28 @@ function queryExplore(skip) {
   ipc_send("request_explore", query);
 }
 
-function JSONAllDecks() {
+function JSONAllDecks(loopcounter, skipto = 0) {
   var i;
-  for (i = 1; i <= 100; i++) {
-    queryExplore(i * 25);
+  for (i = 1; i <= loopcounter; i++) {
+    queryExplore(i * 25 + skipto);
   }
 }
 
 function setExploreDecks(data) {
   console.log(data);
   var fs = require("fs");
-  fs.writeFile("./analysis.json", JSON.stringify(data), err => {
-    if (err) {
-      console.error(err);
-      return;
+  fs.appendFile(
+    "./analysis.json",
+    JSON.stringify(data) + "\n",
+    { flags: "a" },
+    err => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      console.log("File has been created");
     }
-    console.log("File has been created");
-  });
+  );
   if (filterSkip == 0) {
     document.getElementById("explore_list").innerHTML = "";
   }

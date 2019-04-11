@@ -8,3 +8,4 @@ main.sublime-project
 .vscode
 .DS_Store
 analysis.json
+decks.json
