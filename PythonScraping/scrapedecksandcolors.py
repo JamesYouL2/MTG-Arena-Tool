@@ -29,4 +29,4 @@ colors = df.groupby('colors')[['w','l']].sum()
 
 colors['winpercentage']=colors['w']/(colors['w']+colors['l'])
 
-colors.sort_values(['winpercentage'])
+colors.loc[colors.index.str.split(",").str.len()==2].sort_values(['winpercentage'])

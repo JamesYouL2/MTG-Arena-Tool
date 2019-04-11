@@ -332,13 +332,18 @@ function openDeck(deck, deck_type) {
   }
   console.log(deck);
   var fs = require("fs");
-  fs.appendFile("./decks.json", JSON.stringify(deck), { flags: "a" }, err => {
-    if (err) {
-      console.error(err);
-      return;
+  fs.appendFile(
+    "./decks.json",
+    JSON.stringify(deck) + "\n",
+    { flags: "a" },
+    err => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      console.log("File has been created");
     }
-    console.log("File has been created");
-  });
+  );
 
   // #ux_1 is right side, #ux_0 is left side
   let container = $("#ux_1");
