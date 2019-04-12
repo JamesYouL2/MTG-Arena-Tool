@@ -397,16 +397,6 @@ function openDeck(deck, deck_type) {
   });
 }
 
-function openalldecks() {
-  var lineReader = require("readline").createInterface({
-    input: require("fs").createReadStream("./PythonScraping/deckids.txt")
-  });
-
-  lineReader.on("line", function(line) {
-    console.log(line);
-  });
-}
-
 module.exports = {
   open_deck: openDeck
 };
