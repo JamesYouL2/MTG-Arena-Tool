@@ -731,6 +731,7 @@ function eventLoad(event, index) {
   });
 
   $("." + index).on("click", function() {
+    console.log(event);
     open_course_request(event._id);
   });
 }
