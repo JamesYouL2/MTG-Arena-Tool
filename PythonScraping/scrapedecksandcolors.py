@@ -23,6 +23,8 @@ for i in inputdf['result'].iteritems():
 df = pd.concat(appended_data)
 df = df.reset_index()
 
+df = df.drop_duplicates("_id")
+
 df['colors']=df['colors'].astype(str)
 
 colors = df.groupby('colors')[['w','l']].sum()
