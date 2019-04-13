@@ -58,4 +58,6 @@ for i in l:
     df2 = json_normalize(i)
     df3 = df3.append(df2,ignore_index=True)
     
-    
+cardwinrates = pd.merge(cardwinrates,df3,left_index=True,right_on="id")
+
+cardwinrates[['w','l','name','rarity']].to_csv('cardwinrates.csv')
