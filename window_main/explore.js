@@ -742,11 +742,19 @@ function openAllDecks(inputpath = "deckids.txt") {
     input: require("fs").createReadStream("./PythonScraping/" + inputpath)
   });
 
-  lineReader.on("line", function(line) {
-    console.log(line);
-    ipc_send("request_course", line);
+  lineReader.on("line", (line, lineno = line_counter()) => {
+    open_course_request_sync(line, lineno);
   });
 }
+
+const line_counter = ((i = 0) => () => ++i)();
+
+async function open_course_request_sync(courseId, i) {
+  setTimeout(function() {
+    ipc_send("request_course", courseId);
+  }, 200 * i);
+}
+
 module.exports = {
   openExploreTab,
   setExploreDecks,
