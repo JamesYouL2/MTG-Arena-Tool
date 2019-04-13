@@ -16,7 +16,7 @@ def getdeckids(inputfile, outputfile):
     dname = os.path.dirname(abspath)
     os.chdir(dname)
     
-    inputdf = pd.read_json(inputfile)
+    inputdf = pd.read_json(inputfile, lines = True)
     appended_data = []
     
     df = pd.DataFrame
