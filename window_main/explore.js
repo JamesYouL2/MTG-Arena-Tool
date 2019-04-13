@@ -430,13 +430,13 @@ function JSONAllDecksChild(skipto = 0) {
   setTimeout(function() {
     queryExplore(skipto);
     console.log(skipto);
-  }, 200);
+  }, 500);
 }
 
-function JSONAllDecks(loopcounter = 5) {
+function JSONAllDecks(loopcounter = 200, skipto = 0) {
   var i;
   for (i = 0; i < loopcounter; i++) {
-    JSONAllDecksChild(i * 25);
+    JSONAllDecksChild((skipto + i) * 25);
   }
 }
 
@@ -752,5 +752,6 @@ module.exports = {
   setExploreDecks,
   updateExploreCheckbox,
   JSONAllDecks,
-  openAllDecks
+  openAllDecks,
+  queryExplore
 };
