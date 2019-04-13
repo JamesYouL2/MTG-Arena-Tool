@@ -737,9 +737,9 @@ function open_course_request(courseId) {
   ipc_send("request_course", courseId);
 }
 
-function openAllDecks() {
+function openAllDecks(inputpath = "deckids.txt") {
   var lineReader = require("readline").createInterface({
-    input: require("fs").createReadStream("./PythonScraping/deckids.txt")
+    input: require("fs").createReadStream("./PythonScraping/" + inputpath)
   });
 
   lineReader.on("line", function(line) {
