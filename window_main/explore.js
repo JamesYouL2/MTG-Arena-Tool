@@ -430,7 +430,7 @@ function JSONAllDecksChild(skipto = 0, i) {
   setTimeout(function() {
     queryExplore(skipto);
     console.log(skipto);
-  }, 500 * i);
+  }, 2000 * i);
 }
 
 function JSONAllDecks(loopcounter = 200, skipto = 0) {
