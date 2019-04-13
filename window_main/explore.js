@@ -426,10 +426,17 @@ function queryExplore(skip) {
   ipc_send("request_explore", query);
 }
 
-function JSONAllDecks(loopcounter, skipto = 0) {
+function JSONAllDecksChild(skipto = 0) {
+  setTimeout(function() {
+    queryExplore(skipto);
+    console.log(skipto);
+  }, 100);
+}
+
+function JSONAllDecks(loopcounter = 5) {
   var i;
-  for (i = 1; i <= loopcounter; i++) {
-    queryExplore(i * 25 + skipto);
+  for (i = 0; i < loopcounter; i++) {
+    JSONAllDecksChild(i * 25);
   }
 }
 
