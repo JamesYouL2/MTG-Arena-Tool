@@ -429,9 +429,7 @@ function queryExplore(skip) {
 function JSONAllDecks(loopcounter, skipto = 0) {
   var i;
   for (i = 1; i <= loopcounter; i++) {
-    setTimeout(function() {
-      queryExplore(i * 25 + skipto);
-    }, 3000);
+    queryExplore(i * 25 + skipto);
   }
 }
 
