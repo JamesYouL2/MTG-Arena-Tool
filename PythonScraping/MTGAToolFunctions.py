@@ -37,35 +37,26 @@ def createdf(inputfile):
     
     inputdf = pd.read_json('RnaDecks.json', lines=True)
     
-    inputdf=inputdf.drop_duplicates('deckid')
-    
     df = pd.DataFrame()
     
     ##for i in inputdf['mainDeck'].iteritems():
-        ##appended_data.append(json_normalize(i[1]))
-    
+        ##appended_data.append(json_normalize(i[1]))    
+
     for index, row in inputdf.iterrows():
-        df2 = json_normalize(row['CourseDeck']['mainDeck'])
+        maindeck = json_normalize(row['CourseDeck']['mainDeck'])
+        sideboard = json_normalize(row['CourseDeck']['sideboard'])
+        if sideboard.empty:
+            sideboard['id'] = 0
+        df2 = maindeck.merge(sideboard, on='id', how = 'outer')
+        df2 = df2.fillna(value=0)
         df2['playerRank']=row['playerRank']
         df2['Wins']=row['ModuleInstanceData']['WinLossGate']['CurrentWins']
         df2['Losses']=row['ModuleInstanceData']['WinLossGate']['CurrentLosses']
-        df2['colors'] = row['CourseDeck']['colors']
+        df2['colors'] = ''.join(str(row['CourseDeck']['colors']))
+        df2['deckid'] = row['_id']
         df = df.append(df2,ignore_index=True)
-    
-    data = json.load(open('database.json'))
-    
-    l = list(data.values())
-    carddata = pd.DataFrame()
-    
-    for i in l:
-        ##print(i)
-        df2 = json_normalize(i)
-        carddata = carddata.append(df2,ignore_index=True)
         
-    carddata['id'] = carddata['id'].apply(str)
-    
-    cardwinrates = df.groupby('id')[['Wins','Losses']].sum()
-    
-    cardwinrates = pd.merge(cardwinrates,carddata,left_index=True,right_on="id")
-    
-    return cardwinrates
+    df = df.rename(index=str, columns={"quantity_x": "Maindeck", "quantity_y": "sideboard"})
+    df['quantity'] = df['Maindeck'] + df['sideboard']
+
+    return df
