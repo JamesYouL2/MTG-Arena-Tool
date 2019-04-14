@@ -60,3 +60,14 @@ def createdf(inputfile):
     df['quantity'] = df['Maindeck'] + df['sideboard']
 
     return df
+
+def loaddatabase(inputfile='database.json'):
+    data = json.load(open(inputfile))
+    
+    l = list(data.values())
+    carddata = pd.DataFrame()
+    
+    for i in l:
+        ##print(i)
+        df2 = json_normalize(i)
+        carddata = carddata.append(df2,ignore_index=True)

@@ -7,20 +7,24 @@ Created on Fri Apr 12 20:13:03 2019
 
 from MTGAToolFunctions import getdeckids
 from MTGAToolFunctions import createdf
-from MTGAToolFunctions import loaddatabase
-import pandas as pd
-import numpy as np
-from pandas.io.json import json_normalize
-import json
+
 
 getdeckids(inputfile='GRNExplore.json', outputfile='GRNDeckids.txt')
-
 df = createdf('RNAdecks.json')
 
 cardwinrates = df.groupby('id')[['Wins','Losses']].sum()
 
-carddata = loaddatabase()
 
+data = json.load(open('database.json'))
+
+l = list(data.values())
+carddata = pd.DataFrame()
+
+for i in l:
+    ##print(i)
+    df2 = json_normalize(i)
+    carddata = carddata.append(df2,ignore_index=True)
+    
 carddata['id'] = carddata['id'].apply(str)
 
 cardwinrates = df.groupby('id')[['Wins','Losses']].sum()
