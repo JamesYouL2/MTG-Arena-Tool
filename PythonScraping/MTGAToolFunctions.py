@@ -5,7 +5,6 @@ Created on Fri Apr 12 20:44:50 2019
 @author: JJYJa
 """
 
-
 import json
 import pandas as pd
 import os
@@ -31,45 +30,42 @@ def getdeckids(inputfile, outputfile):
     
     df["_id"].to_csv(outputfile,index=False)
     
-def cardwinrates (inputjson, inputfile, deckwinratefile, outputfile):
-    inputdf = pd.read_json(inputjson, lines=True)
-    deckid = pd.read_csv(inputfile, header=None, names=['deckid'])
-        
-    mergedf = pd.merge(inputdf, deckid, left_index=True, right_index=True)
-    mergedf = mergedf.drop_duplicates('deckid')
+def createdf(inputfile):
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
     
-    maindecksdf = pd.DataFrame()
+    inputdf = pd.read_json('RnaDecks.json', lines=True)
     
-    for index, row in mergedf.iterrows():
-        df2 = json_normalize(row['mainDeck'])
-        df2['deckid']=row['deckid']
-        maindecksdf = maindecksdf.append(df2,ignore_index=True)
-
-    inputdf = pd.read_json(deckwinratefile, lines = True) 
-    appended_data = []
-    
-    for i in inputdf['result'].iteritems():
-        appended_data.append(json_normalize(i[1]))
-        
-    concatdf = pd.concat(appended_data)
-    concatdf = concatdf.reset_index()
-
-    df = pd.merge(maindecksdf,concatdf,left_on="deckid",right_on="_id")
-    
-    cardwinrates = df.groupby('id')[['w','l']].sum()
-    
-    data = json.load(open('database.json'))
-    l = list(data.values())
+    inputdf=inputdf.drop_duplicates('deckid')
     
     df = pd.DataFrame()
     
-    for i in l:
-        print(i)
-        df2 = json_normalize(i)
+    ##for i in inputdf['mainDeck'].iteritems():
+        ##appended_data.append(json_normalize(i[1]))
+    
+    for index, row in inputdf.iterrows():
+        df2 = json_normalize(row['CourseDeck']['mainDeck'])
+        df2['playerRank']=row['playerRank']
+        df2['Wins']=row['ModuleInstanceData']['WinLossGate']['CurrentWins']
+        df2['Losses']=row['ModuleInstanceData']['WinLossGate']['CurrentLosses']
+        df2['colors'] = row['CourseDeck']['colors']
         df = df.append(df2,ignore_index=True)
+    
+    data = json.load(open('database.json'))
+    
+    l = list(data.values())
+    carddata = pd.DataFrame()
+    
+    for i in l:
+        ##print(i)
+        df2 = json_normalize(i)
+        carddata = carddata.append(df2,ignore_index=True)
         
-    cardwinrates = pd.merge(cardwinrates, df, left_index=True, right_on="id")
+    carddata['id'] = carddata['id'].apply(str)
     
-    cardwinrates = cardwinrates.loc[cardwinrates['rarity']!='land']
+    cardwinrates = df.groupby('id')[['Wins','Losses']].sum()
     
-    cardwinrates[['w','l','name','rarity']].to_csv('cardwinrates.csv')
+    cardwinrates = pd.merge(cardwinrates,carddata,left_index=True,right_on="id")
+    
+    return cardwinrates
