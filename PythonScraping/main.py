@@ -7,7 +7,10 @@ Created on Fri Apr 12 20:13:03 2019
 
 from MTGAToolFunctions import getdeckids
 from MTGAToolFunctions import createdf
-
+import pandas as pd
+import numpy as np
+from pandas.io.json import json_normalize
+import json
 
 getdeckids(inputfile='GRNExplore.json', outputfile='GRNDeckids.txt')
 df = createdf('RNAdecks.json')
