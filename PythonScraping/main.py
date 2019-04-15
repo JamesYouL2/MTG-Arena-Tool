@@ -21,7 +21,7 @@ getdeckids(inputfile='GRNExplore.json', outputfile='GRNDeckids.txt')
 
 df = createdf('RNAdecks.json')
 
-cardwinrates = df.groupby('id')[['Wins','Losses']].sum()
+cardwinrates = df.loc[df['Maindeck'] > 0][['Wins','Losses']].sum()
 
 carddata = loaddatabase()
 
