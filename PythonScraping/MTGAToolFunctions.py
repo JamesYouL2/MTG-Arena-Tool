@@ -68,6 +68,8 @@ def loaddatabase(inputfile='database.json'):
     carddata = pd.DataFrame()
     
     for i in l:
-        ##print(i)
-        df2 = json_normalize(i)
-        carddata = carddata.append(df2,ignore_index=True)
+        if type(i) == dict and i.get("id") is not None:
+            df2 = json_normalize(i)
+            carddata = carddata.append(df2,ignore_index=False)
+    
+    return carddata
