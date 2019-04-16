@@ -21,7 +21,15 @@ getdeckids(inputfile='GRNExplore.json', outputfile='GRNDeckids.txt')
 
 df = createdf('RNAdecks.json')
 
-cardwinrates = df.loc[df['Maindeck'] > 0][['Wins','Losses']].sum()
+colorwinrates = df.groupby('colors')[['Wins','Losses']].sum().reset_index()
+colorwinrates['WinLoss'] = colorwinrates['Wins']/(colorwinrates['Wins']+colorwinrates['Losses'])
+colorwinrates['colors'] = colorwinrates['colors'].str.replace('1', 'W')
+colorwinrates['colors'] = colorwinrates['colors'].str.replace('2', 'U')
+colorwinrates['colors'] = colorwinrates['colors'].str.replace('3', 'B')
+colorwinrates['colors'] = colorwinrates['colors'].str.replace('4', 'R')
+colorwinrates['colors'] = colorwinrates['colors'].str.replace('5', 'G')
+
+cardwinrates = df.loc[df['Maindeck'] > 0].groupby('id')[['Wins','Losses']].sum()
 
 carddata = loaddatabase()
 
@@ -41,3 +49,5 @@ cardwinrates['AdjustedGames'] = np.where(cardwinrates['rarity']=='mythic',cardwi
 cardwinrates['WARC'] = (cardwinrates['W/L'] - .5) * cardwinrates['AdjustedGames']
 
 cardwinrates[['Wins','Losses','name','rarity', 'W/L', 'Games', 'AdjustedGames', 'WARC']].to_csv('cardwinrates.csv')
+
+colorwinrates.sort_values('WinLoss').to_csv('cardwinrates.tab',sep='\t')
