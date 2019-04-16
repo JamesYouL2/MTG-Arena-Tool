@@ -2,7 +2,6 @@
 global
   tokenAuth,
   decks,
-  rememberMe,
   rstore,
   loadPlayerConfig,
   cardsDb,
@@ -90,6 +89,7 @@ function httpBasic() {
         _headers.method != "get_status" &&
         debugLog == false
       ) {
+        ipc_send("set_offline", true);
         callback({
           message: "Settings dont allow sending data! > " + _headers.method
         });
@@ -253,7 +253,7 @@ function httpBasic() {
 
                 ipc_send("auth", parsedResult);
                 //ipc_send("auth", parsedResult.arenaids);
-                if (rememberMe) {
+                if (rstore.get("settings").remember_me) {
                   rstore.set("token", tokenAuth);
                   rstore.set("email", playerData.userName);
                 }
@@ -319,6 +319,7 @@ function httpBasic() {
                   time: 1000
                 });
                 ipc_send("set_db", results);
+                ipc_send("show_login", true);
               }
             } else if (_headers.method == "tou_join") {
               ipc_send("popup", {
@@ -342,14 +343,15 @@ function httpBasic() {
                 });
               }
               if (_headers.method == "auth") {
-                if (parsedResult.error == "Invalid credentials.") {
-                  tokenAuth = undefined;
-                  rstore.set("email", "");
-                  rstore.set("token", "");
-                  ipc_send("auth", {});
-                  ipc_send("clear_pwd", 1);
-                  ipc_send("set_remember", false);
-                }
+                tokenAuth = undefined;
+                rstore.set("email", "");
+                rstore.set("token", "");
+                ipc_send("auth", {});
+                ipc_send("clear_pwd", 1);
+                ipc_send("popup", {
+                  text: `Error: ${parsedResult.error}`,
+                  time: 3000
+                });
               }
               // errors here
             } else if (!parsedResult && _headers.method == "auth") {
@@ -379,6 +381,9 @@ function httpBasic() {
         });
       });
       req.on("error", function(e) {
+        if (_headers.method == "get_database") {
+          ipc_send("show_login", true);
+        }
         console.error(`problem with request: ${e.message}`);
         if (!metadataState) {
           ipc_send("popup", {
@@ -579,11 +584,12 @@ function httpDraftShareLink(did, exp) {
   });
 }
 
-function httpHomeGet() {
+function httpHomeGet(set) {
   var _id = makeId(6);
   httpAsync.unshift({
     reqId: _id,
     method: "home_get",
+    set: set,
     method_path: "/api/get_home.php"
   });
 }

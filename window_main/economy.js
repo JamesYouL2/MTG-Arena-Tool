@@ -147,7 +147,8 @@ function createDayHeader(change) {
   if (daysago == 1) flexLeft.innerHTML = "Yesterday";
   if (daysago > 1) {
     let date = new Date(change.date);
-    flexLeft.innerHTML = localDateFormat(date);
+    date = new Date(date.setHours(0, 0, 0, 0));
+    flexLeft.innerHTML = localDayDateFormat(date);
   }
 
   let flexRight = createDivision(["economy_day_stats", "flex_item"]);
@@ -528,9 +529,8 @@ function createChangeRow(change, economyId) {
 }
 
 function createEconomyUI(mainDiv) {
-  daysago = 0;
+  daysago = -999;
   dayList = [];
-  dayList[0] = new economyDay();
   economyHistory.changes.sort(compare_economy);
 
   var topSelectItems = ["All", "Day Summaries"];
@@ -539,8 +539,13 @@ function createEconomyUI(mainDiv) {
   for (var n = 0; n < economyHistory.changes.length; n++) {
     let economyId = economyHistory.changes[n];
     let change = economyHistory[economyId];
-
     if (change == undefined) continue;
+
+    if (daysago != differenceInCalendarDays(new Date(), change.date)) {
+      daysago = differenceInCalendarDays(new Date(), change.date);
+      dayList[daysago] = new economyDay();
+      console.log("new day", change.date);
+    }
 
     let ctx = change.originalContext || change.context;
     change.contextPretty = getPrettyContext(ctx);
@@ -558,11 +563,8 @@ function createEconomyUI(mainDiv) {
       if (change.delta.goldDelta > 0)
         dayList[daysago].goldEarned += change.delta.goldDelta;
       else dayList[daysago].goldSpent += Math.abs(change.delta.goldDelta);
-    }
 
-    if (daysago != differenceInCalendarDays(new Date(), change.date)) {
-      daysago = differenceInCalendarDays(new Date(), change.date);
-      dayList[daysago] = new economyDay();
+      console.log(economyId, "> ", change.date, " > ", change.delta.goldDelta);
     }
   }
 

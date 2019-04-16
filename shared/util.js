@@ -16,6 +16,9 @@ const BLACK = 3;
 const RED = 4;
 const GREEN = 5;
 
+// Magic constant to represent auth token in form
+const HIDDEN_PW = "********";
+
 const math = require("mathjs");
 math.config({ precision: 2000 });
 
@@ -694,7 +697,7 @@ function wrap(element, wrapper) {
   return element;
 }
 
-function addCardTile(grpId, indent, quantity, element) {
+function addCardTile(grpId, indent, quantity, element, showWildcards = false, deck = null, isSideboard = false) {
   // if element is a jquery object convert to bare DOM element
   // TODO: Remove this once jQuery is removed.
   if (element instanceof jQuery) {
@@ -798,30 +801,29 @@ function addCardTile(grpId, indent, quantity, element) {
       prevc = /^\d+$/.test(cost);
     });
 
-    if (renderer == 0) {
+    if (showWildcards && renderer == 0) {
       if (card.type.indexOf("Basic Land") == -1) {
-        quantity = get_wc_missing(grpId, quantity);
-
-        //if (grpId == 67306 && quantity > 4) {
-        //  quantity = 4;
-        //}
+        let missing = 0;
+        if (deck) {
+            missing = get_wc_missing(deck, grpId, isSideboard);
+        }
 
         let xoff = rarities.indexOf(card.rarity) * -24;
 
         //if (cards[grpId] == undefined) {
-        if (quantity > 0) {
-          let yoff = quantity * -24;
+        if (missing > 0) {
+          let yoff = missing * -24;
 
           var asasdf = createDivision(["not_owned_sprite"]);
           asasdf.style.cssText = `background-position: ${xoff}px ${yoff}px; left: calc(0px - 100% + ${ww -
             14}px);`;
-          asasdf.title = "${quantity} missing";
+          asasdf.title = "${missing} missing";
           cont.appendChild(asasdf);
         }
         /*}
-        else if (quantity > cards[grpId]) {
-          let yoff = (quantity - cards[grpId]) * -24;
-          cont.append(`<div style="background-position: ${xoff}px ${yoff}px; left: calc(0px - 100% + ${(ww-14)}px);" class="not_owned_sprite" title="${(quantity-cards[grpId])} missing"></div>`);
+        else if (missing > cards[grpId]) {
+          let yoff = (missing - cards[grpId]) * -24;
+          cont.append(`<div style="background-position: ${xoff}px ${yoff}px; left: calc(0px - 100% + ${(ww-14)}px);" class="not_owned_sprite" title="${(missing-cards[grpId])} missing"></div>`);
         }
         */
       }
@@ -1142,37 +1144,6 @@ function getReadableEvent(arg) {
   }
 
   return arg;
-}
-
-//
-function getReadableDeckName(deck_id) {
-  if (typeof decks === 'undefined') {
-    return deck_id;
-  }
-  matches = decks.filter(deck => deck.id == deck_id);
-  if (matches.length) {
-    return matches[0].name;
-  }
-  return deck_id;
-}
-
-//
-function getReadableDeckNameWithCost(deck_id) {
-  if (typeof decks === 'undefined') {
-    return deck_id;
-  }
-  matches = decks.filter(deck => deck.id == deck_id);
-  console.log(matches);
-  if (matches.length) {
-    let colorsString = '';
-    if (matches[0].colors) {
-      matches[0].colors.forEach(color => {
-          colorsString += `<div class="mana_s16 mana_${orderedColorCodes[color-1]}"></div>`;
-      });
-    }
-    return `${matches[0].name}<div class="flex_item">${colorsString}</div>`;
-  }
-  return deck_id;
 }
 
 //
@@ -1754,16 +1725,27 @@ function get_rank_class(ranking) {
 }
 
 //
-function get_wc_missing(grpid, quantity) {
+function get_wc_missing(deck, grpid, isSideboard) {
+  let mainQuantity = 0;
+  let mainMatches = deck.mainDeck.filter(card => card.id == grpid);
+  if (mainMatches.length) {
+    mainQuantity = mainMatches[0].quantity;
+  }
+
+  let sideboardQuantity = 0;
+  let sideboardMatches = deck.sideboard.filter(card => card.id == grpid);
+  if (sideboardMatches.length) {
+    sideboardQuantity = sideboardMatches[0].quantity;
+  }
+
+  let needed = mainQuantity;
+  if (isSideboard) {
+    needed = sideboardQuantity;
+  }
+  // cap at 4 copies to handle petitioners, rat colony, etc
+  needed = Math.min(4, needed);
+
   let card = cardsDb.get(grpid);
-
-  if (grpid == 67306 && quantity > 4) {
-    quantity = 4;
-  }
-  if (grpid == 69172 && quantity > 4) {
-    quantity = 4;
-  }
-
   let arr = card.reprints;
   if (!arr) arr = [grpid];
   else arr.push(grpid);
@@ -1776,102 +1758,34 @@ function get_wc_missing(grpid, quantity) {
     }
   });
 
-  return Math.max(0, quantity - have);
+  let copiesLeft = have;
+  if (isSideboard) {
+    copiesLeft = Math.max(0, copiesLeft - mainQuantity);
+
+    let infiniteCards = [ 67306, 69172 ] // petitioners, rat colony, etc
+    if (have >= 4 && infiniteCards.indexOf(grpid) >= 0) {
+      copiesLeft = 4;
+    }
+  }
+
+  return Math.max(0, needed - copiesLeft);
 }
 
 //
 function get_deck_missing(deck) {
-  var missing = { rare: 0, common: 0, uncommon: 0, mythic: 0 };
+  let missing = { rare: 0, common: 0, uncommon: 0, mythic: 0 };
+  let alreadySeenIds = new Set(); // prevents double counting cards across main/sideboard
+  let entireDeck = [...deck.mainDeck, ...deck.sideboard];
 
-  deck.mainDeck.forEach(function(card) {
-    var grpid = card.id;
-    var quantity = card.quantity;
-    var rarity = cardsDb.get(grpid).rarity;
-
-    let add = get_wc_missing(grpid, quantity);
-
-    if (rarity == "common") {
-      missing.common += add;
+  entireDeck.forEach(card => {
+    let grpid = card.id;
+    // process each card at most once
+    if (alreadySeenIds.has(grpid)) {
+        return;
     }
-    if (rarity == "uncommon") {
-      missing.uncommon += add;
-    }
-    if (rarity == "rare") {
-      missing.rare += add;
-    }
-    if (rarity == "mythic") {
-      missing.mythic += add;
-    }
-  });
-
-  deck.sideboard.forEach(function(card) {
-    var grpid = card.id;
-    var quantity = card.quantity;
-    var rarity = cardsDb.get(grpid).rarity;
-
-    let add = get_wc_missing(grpid, quantity);
-
-    if (rarity == "common") {
-      missing.common += add;
-    }
-    if (rarity == "uncommon") {
-      missing.uncommon += add;
-    }
-    if (rarity == "rare") {
-      missing.rare += add;
-    }
-    if (rarity == "mythic") {
-      missing.mythic += add;
-    }
-  });
-
-  return missing;
-}
-
-//
-function get_deck_missing_short(deck) {
-  var missing = { r: 0, c: 0, u: 0, m: 0 };
-
-  deck.mainDeck.forEach(function(card) {
-    var grpid = card.id;
-    var quantity = card.quantity;
-    var rarity = cardsDb.get(grpid).rarity;
-
-    let add = get_wc_missing(grpid, quantity);
-
-    if (rarity == "common") {
-      missing.c += add;
-    }
-    if (rarity == "uncommon") {
-      missing.u += add;
-    }
-    if (rarity == "rare") {
-      missing.r += add;
-    }
-    if (rarity == "mythic") {
-      missing.m += add;
-    }
-  });
-
-  deck.sideboard.forEach(function(card) {
-    var grpid = card.id;
-    var quantity = card.quantity;
-    var rarity = cardsDb.get(grpid).rarity;
-
-    let add = get_wc_missing(grpid, quantity);
-
-    if (rarity == "common") {
-      missing.c += add;
-    }
-    if (rarity == "uncommon") {
-      missing.u += add;
-    }
-    if (rarity == "rare") {
-      missing.r += add;
-    }
-    if (rarity == "mythic") {
-      missing.m += add;
-    }
+    let rarity = cardsDb.get(grpid).rarity;
+    missing[rarity] += getCardsMissingCount(deck, grpid);
+    alreadySeenIds.add(grpid); // remember this card
   });
 
   return missing;
@@ -1879,11 +1793,9 @@ function get_deck_missing_short(deck) {
 
 //
 function getCardsMissingCount(deck, grpid) {
-  let neededCount = 0;
-  let entireDeck = [...deck.mainDeck, ...deck.sideboard];
-  let matches = entireDeck.filter(card => card.id == grpid);
-  matches.forEach(card => neededCount += card.quantity);
-  return get_wc_missing(grpid, neededCount);
+  let mainMissing = get_wc_missing(deck, grpid, false);
+  let sideboardMissing = get_wc_missing(deck, grpid, true);
+  return mainMissing + sideboardMissing;
 }
 
 //
@@ -2369,6 +2281,15 @@ function localDateFormat(date) {
     hour="numeric"
     minute="numeric">
     ${date.toString()}
+  </local-time>`;
+}
+
+function localDayDateFormat(date) {
+  return `<local-time datetime="${date.toISOString()}"
+    year="numeric"
+    month="long"
+    day="numeric">
+    ${date.toDateString()}
   </local-time>`;
 }
 
