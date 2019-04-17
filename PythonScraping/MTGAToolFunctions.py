@@ -35,7 +35,7 @@ def createdf(inputfile):
     dname = os.path.dirname(abspath)
     os.chdir(dname)
     
-    inputdf = pd.read_json('RnaDecks.json', lines=True)
+    inputdf = pd.read_json(inputfile, lines=True)
     
     df = pd.DataFrame()
     

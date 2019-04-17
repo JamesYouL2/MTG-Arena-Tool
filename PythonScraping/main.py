@@ -19,9 +19,14 @@ from MTGAToolFunctions import loaddatabase
 
 getdeckids(inputfile='GRNExplore.json', outputfile='GRNDeckids.txt')
 
-df = createdf('RNAdecks.json')
+basedf = createdf('GRNdecks.json')
 
-colorwinrates = df.groupby('colors')[['Wins','Losses']].sum().reset_index()
+df = basedf.loc[basedf['playerRank'].isin(['Silver','Gold', 'Mythic', 'Platinum'])]
+
+carddata = loaddatabase()
+deckdf = df.drop_duplicates(subset=['colors','deckid'])
+
+colorwinrates = deckdf.groupby('colors')[['Wins','Losses']].sum().reset_index()
 colorwinrates['WinLoss'] = colorwinrates['Wins']/(colorwinrates['Wins']+colorwinrates['Losses'])
 colorwinrates['colors'] = colorwinrates['colors'].str.replace('1', 'W')
 colorwinrates['colors'] = colorwinrates['colors'].str.replace('2', 'U')
@@ -29,14 +34,16 @@ colorwinrates['colors'] = colorwinrates['colors'].str.replace('3', 'B')
 colorwinrates['colors'] = colorwinrates['colors'].str.replace('4', 'R')
 colorwinrates['colors'] = colorwinrates['colors'].str.replace('5', 'G')
 
-cardwinrates = df.loc[df['Maindeck'] > 0].groupby('id')[['Wins','Losses']].sum()
+#cardwinrates = df.groupby('id')[['Wins','Losses']].sum().reset_index()
 
-carddata = loaddatabase()
+cardwinrates = df.loc[df['Maindeck'] > 0].groupby('id')[['Wins','Losses']].sum().reset_index()
 
-##carddata['id'] = carddata['id'].apply(str)
-##carddata['id'] = carddata['id'].str[:5]
+carddata['id'] = carddata['id'].apply(str)
+carddata['id'] = carddata['id'].str[:5]
+cardwinrates['id'] = cardwinrates['id'].apply(str)
+cardwinrates['id'].str.len().unique()
 
-cardwinrates = pd.merge(cardwinrates,carddata,left_index=True,right_on="id")
+cardwinrates = pd.merge(cardwinrates,carddata,left_on="id",right_on="id")
 
 cardwinrates['W/L'] = cardwinrates['Wins']/(cardwinrates['Losses']+cardwinrates['Wins'])
 
@@ -48,6 +55,6 @@ cardwinrates['AdjustedGames'] = np.where(cardwinrates['rarity']=='mythic',cardwi
 
 cardwinrates['WARC'] = (cardwinrates['W/L'] - .5) * cardwinrates['AdjustedGames']
 
-cardwinrates[['Wins','Losses','name','rarity', 'W/L', 'Games', 'AdjustedGames', 'WARC']].to_csv('cardwinrates.csv')
+cardwinrates.sort_values('W/L', ascending=False)[['Wins','Losses','name','rarity', 'W/L', 'Games']].to_csv('cardwinrates.tab',sep='\t')
 
-colorwinrates.sort_values('WinLoss').to_csv('cardwinrates.tab',sep='\t')
+colorwinrates.sort_values('WinLoss', ascending=False).to_csv('colorwinrates.tab',sep='\t')
