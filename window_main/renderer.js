@@ -39,9 +39,6 @@ const open_decks_tab = require("./decks").open_decks_tab;
 const open_history_tab = require("./history").open_history_tab;
 const openExploreTab = require("./explore").openExploreTab;
 const setExploreDecks = require("./explore").setExploreDecks;
-const JSONAllDecks = require("./explore").JSONAllDecks;
-const openAllDecks = require("./explore").openAllDecks;
-const queryExplore = require("./explore").queryExplore;
 const updateExploreCheckbox = require("./explore").updateExploreCheckbox;
 const openCollectionTab = require("./collection").openCollectionTab;
 const openEventsTab = require("./events").openEventsTab;
@@ -548,26 +545,11 @@ function set_ladder_decks(arg) {
 //
 ipc.on("open_course_deck", function(event, arg) {
   $(".moving_ux").animate({ left: "-100%" }, 250, "easeInOutCubic");
-  console.log(arg);
-
-  var fs = require("fs");
-  fs.appendFile(
-    "./decks.json",
-    JSON.stringify(arg) + "\n",
-    { flags: "a" },
-    err => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      console.log("File has been created");
-    }
-  );
-
   arg = arg.CourseDeck;
   arg.colors = get_deck_colors(arg);
   arg.mainDeck.sort(compare_cards);
   arg.sideboard.sort(compare_cards);
+  console.log(arg);
 
   arg.mainDeck = removeDuplicates(arg.mainDeck);
   arg.sideboard = removeDuplicates(arg.sideboard);

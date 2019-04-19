@@ -101,10 +101,7 @@ function openExploreTab() {
 
   $(this).off();
   mainDiv.addEventListener("scroll", () => {
-    if (
-      Math.round(mainDiv.scrollTop + mainDiv.offsetHeight) >=
-      mainDiv.scrollHeight
-    ) {
+    if (Math.round(mainDiv.scrollTop + mainDiv.offsetHeight) >= mainDiv.scrollHeight) {
       queryExplore(filterSkip);
     }
   });
@@ -426,35 +423,8 @@ function queryExplore(skip) {
   ipc_send("request_explore", query);
 }
 
-function JSONAllDecksChild(skipto = 0, i) {
-  setTimeout(function() {
-    queryExplore(skipto);
-    console.log(skipto);
-  }, 2000 * i);
-}
-
-function JSONAllDecks(loopcounter = 200, skipto = 0) {
-  var i;
-  for (i = 0; i < loopcounter; i++) {
-    JSONAllDecksChild((skipto + i) * 25, i);
-  }
-}
-
 function setExploreDecks(data) {
   console.log(data);
-  var fs = require("fs");
-  fs.appendFile(
-    "./analysis.json",
-    JSON.stringify(data) + "\n",
-    { flags: "a" },
-    err => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      console.log("File has been created");
-    }
-  );
   if (filterSkip == 0) {
     document.getElementById("explore_list").innerHTML = "";
   }
@@ -602,7 +572,6 @@ function deckLoad(_deck, index) {
   });
 
   $("." + index).on("click", function() {
-    console.log(_deck);
     _deck.mainDeck = removeDuplicates(_deck.mainDeck).sort(compare_cards);
     _deck.sideboard = removeDuplicates(_deck.sideboard).sort(compare_cards);
     open_deck(_deck, 1);
@@ -726,40 +695,17 @@ function eventLoad(event, index) {
   });
 
   $("." + index).on("click", function() {
-    console.log(event);
     open_course_request(event._id);
   });
 }
 
 function open_course_request(courseId) {
   showLoadingBars();
-  console.log(courseId);
   ipc_send("request_course", courseId);
-}
-
-function openAllDecks(inputpath = "deckids.txt") {
-  var lineReader = require("readline").createInterface({
-    input: require("fs").createReadStream("./PythonScraping/" + inputpath)
-  });
-
-  lineReader.on("line", (line, lineno = line_counter()) => {
-    open_course_request_sync(line, lineno);
-  });
-}
-
-const line_counter = ((i = 0) => () => ++i)();
-
-async function open_course_request_sync(courseId, i) {
-  setTimeout(function() {
-    ipc_send("request_course", courseId);
-  }, 200 * i);
 }
 
 module.exports = {
   openExploreTab,
   setExploreDecks,
-  updateExploreCheckbox,
-  JSONAllDecks,
-  openAllDecks,
-  queryExplore
+  updateExploreCheckbox
 };
