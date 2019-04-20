@@ -19,7 +19,7 @@ from MTGAToolFunctions import loaddatabase
 
 getdeckids(inputfile='GRNExplore.json', outputfile='GRNDeckids.txt')
 
-basedf = createdf('GRNdecks.json')
+basedf = createdf('RNAdecks.json')
 
 df = basedf.loc[basedf['playerRank'].isin(['Silver','Gold', 'Mythic', 'Platinum'])]
 

@@ -5,8 +5,8 @@ import time
 S = requests.Session()
 
 url ='https://mtgatool.com/api/'
-rslt = S.post(url+"login.php", data={'email':'YOURUSERNAME', 'password':
-                                     hashlib.sha1('YOURPASSWORD'.encode()).hexdigest(),
+rslt = S.post(url+"login.php", data={'email':'lastchancexi@yahoo.com', 'password':
+                                     hashlib.sha1('unreal12'.encode()).hexdigest(),
                                      'playername':'', 'playerid':'',
                                      'mtgaversion':'', 'playerid':'',
                                      'version':'', 'reqId':'ABCDEF',
@@ -21,7 +21,7 @@ data_ids = set()
 decks = {}
 
 # 100 is the number of sets of 25 decklists to retrieve
-for ii in range(100):
+for ii in range(250):
     time.sleep(1) # give the server a break, sleep between queries
 
     skip = ii * 25
@@ -31,7 +31,7 @@ for ii in range(100):
                     data={'token': token, 'filter_wcc': "", 'filter_wcu': "",
                           'filter_sortdir': 1, 'filter_type': '',
                           'filter_sort':"By Date", 'filter_skip':str(skip),
-                          'filter_owned':"false", 'filter_event':"",
+                          'filter_owned':"false", 'filter_event':"QuickDraft_RNA_20190315",
                           "filter_wcr":"", "filter_wcm":"", })
 
     data_this = result.json()
