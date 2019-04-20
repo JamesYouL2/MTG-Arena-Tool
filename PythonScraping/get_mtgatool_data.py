@@ -48,7 +48,7 @@ for ii in range(250):
 
     # download each deck / match result entry
     for entry in data_this['result']:
-        time.sleep(1) # again, give the server a break
+        time.sleep(.25) # again, give the server a break
         deckid = entry['_id']
 
         course = S.post(url+"get_course.php", data={'token': token, 'courseid':deckid})
@@ -62,7 +62,3 @@ for ii in range(250):
 
 # then do stuff with the data (I'm not sure what yet, but it might be possible
 # to get actual matchup data by cross-matching IDs)
-all_match_ids = [x
-                 for deckid in decks
-                 for x in decks[deckid]['result']['ModuleInstanceData']['WinLossGate']['ProcessedMatchIds']
-                ]
