@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.io.json import json_normalize
 import json
 import numpy as np
-from MTGAToolFunctions import loaddatabase
+
 from sklearn.model_selection import train_test_split
 
 S = requests.Session()
@@ -27,7 +27,7 @@ data_ids = set()
 decks = {}
 
 # 100 is the number of sets of 25 decklists to retrieve
-for ii in range(200):
+for ii in range(500):
     time.sleep(1) # give the server a break, sleep between queries
 
     skip = ii * 25
@@ -67,12 +67,14 @@ for ii in range(200):
 
 #have to start by converting to pandas df
 inputdf = pd.DataFrame.from_dict(decks,orient='index')
-inputseries=inputdf['result']
+
 #save pandas df
-inputdf.to_pickle('inputdf.pkl')
+inputdf.to_pickle('GRNdraft.pkl')
 ##########
+
 #Load pandas df
-inputdf=pd.read_pickle('inputdf.pkl')
+inputdf=pd.read_pickle('GRNdraft.pkl')
+
 #########
 #Color winrates
 df = json_normalize(inputdf['result'])
@@ -83,6 +85,7 @@ colorwinrates = df.groupby('Colors')[['ModuleInstanceData.WinLossGate.CurrentWin
 df['GoodDeck']=np.where(df['ModuleInstanceData.WinLossGate.CurrentWins']>4.5, 1, .5)
 df['GoodDeck']=np.where(df['ModuleInstanceData.WinLossGate.CurrentWins']<1.5, 0, df['GoodDeck'])
 
+from MTGAToolFunctions import loaddatabase
 carddata = loaddatabase()
 
 maindeck=df['CourseDeck.mainDeck'].apply(json_normalize)
@@ -108,10 +111,12 @@ X = X.merge(pd.get_dummies(X['playerRank']), left_index=True, right_index=True)
 X = X.merge(pd.get_dummies(X['CourseDeck.colors'].apply(str)), left_index=True, right_index=True)
 X = X.drop(columns=['CourseDeck.colors','playerRank'])
 
-X_train, X_test, y_train, y_test = train_test_split(X, modeldf['GoodDeck'], test_size=0.25)
+X_train, X_test, y_train, y_test = train_test_split(modeldf[feature_list], modeldf['GoodDeck'], test_size=0.1)
 
 # Import the model we are using
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble.partial_dependence import partial_dependence, plot_partial_dependence
+from sklearn.ensemble import GradientBoostingRegressor
 
 rf = RandomForestClassifier(n_estimators=500)
 
@@ -120,4 +125,26 @@ rf.fit(X_train, y_train)
 
 pd.crosstab(y_test, rf.predict(X_test), rownames=['Actual'], colnames=['Predicted'])
 
-feature_imp = pd.Series(rf.feature_importances_,index=feature_list).sort_values(ascending=False)
+params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 2,
+          'learning_rate': 0.01, 'loss': 'ls'}
+
+gbr = GradientBoostingRegressor(**params)
+gbr.fit(X_train, y_train)
+pd.crosstab(y_test, gbr.predict(X_test).round(), rownames=['Actual'], colnames=['Predicted'])
+
+pd.DataFrame({'Variable':X_test.columns,
+'Importance':gbr.feature_importances_}).sort_values('Importance', ascending=False)
+
+fig, axs = plot_partial_dependence(gbr, X=X_test, features=['Parhelion Patrol', 'Rubblebelt Boar', 'Hammer Dropper'],
+                                       feature_names=feature_list,
+                                       n_jobs=1, grid_resolution=10)
+
+allpd = {}
+
+for i in range(len(feature_list)-1):
+    pd, values = partial_dependence(gbr, target_variables=i, X=X_test) 
+    allpd.update(dict(zip([feature_list[i]], pd.tolist())))
+
+pd.DataFrame(allpd)
+
+pd.DataFrame(d)

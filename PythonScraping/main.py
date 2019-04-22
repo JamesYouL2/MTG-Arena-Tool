@@ -11,7 +11,7 @@ import numpy as np
 from pandas.io.json import json_normalize
 import json
 
-os.chdir("C:/MTG-Arena-Tool/PythonScraping")
+os.chdir("E:/MTG-Arena-Tool/PythonScraping")
 
 from MTGAToolFunctions import getdeckids
 from MTGAToolFunctions import createdf
