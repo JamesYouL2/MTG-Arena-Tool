@@ -4,6 +4,8 @@ import time
 import pandas as pd
 from pandas.io.json import json_normalize
 import json
+import numpy as np
+from MTGAToolFunctions import loaddatabase
 
 S = requests.Session()
 
@@ -77,42 +79,31 @@ df['Colors']=df['CourseDeck.colors'].apply(str)
 colorwinrates = df.groupby('Colors')[['ModuleInstanceData.WinLossGate.CurrentWins','ModuleInstanceData.WinLossGate.CurrentLosses']].sum().reset_index()
 ##########
 
+df['GoodDeck']=np.where(df['ModuleInstanceData.WinLossGate.CurrentWins']>4.5, 1, .5)
+df['GoodDeck']=np.where(df['ModuleInstanceData.WinLossGate.CurrentWins']<1.5, 0, df['GoodDeck'])
+
+carddata = loaddatabase()
+
 maindeck=df['CourseDeck.mainDeck'].apply(json_normalize)
 maindeck=pd.concat(maindeck.to_dict(),axis=0)
 maindeck.index = maindeck.index.set_names(['DeckID', 'Seq'])
 maindeck.reset_index(inplace=True)  
 maindeck['id']=pd.to_numeric(maindeck['id'])
+maindeck=maindeck.merge(carddata)
 
-MainDeckCards=maindeck.pivot_table('quantity', ['DeckID'], 'id').fillna(0)
-
-#get wins and losses
-winloss=df[['ModuleInstanceData.WinLossGate.CurrentWins','ModuleInstanceData.WinLossGate.CurrentLosses']]
-winloss=winloss.rename(index=int, columns={"ModuleInstanceData.WinLossGate.CurrentWins": "Wins", "ModuleInstanceData.WinLossGate.CurrentLosses": "Losses"})
-winloss['WL']=winloss['Wins']/(winloss['Losses']+winloss['Wins'])
-
-wins = pd.DataFrame([winloss.iloc[idx] 
-                       for idx in winloss.index 
-                       for _ in range(int(winloss.iloc[idx]['Wins']))]).reset_index()
-wins['Win'] = 1
-
-loss = pd.DataFrame([winloss.iloc[idx] 
-                       for idx in winloss.index 
-                       for _ in range(int(winloss.iloc[idx]['Losses']))]).reset_index()
-
-loss['Win'] = 0
-
-y=pd.concat([wins,loss])
-y=y[['Win','index']]
-
+#list of all decks and main deck cards
+MainDeckCards=maindeck.pivot_table('quantity', ['DeckID'], 'name').fillna(0)
 MainDeckCards = MainDeckCards.astype(int)
 feature_list=list(MainDeckCards)
-from sklearn.preprocessing import StandardScaler
+
 from sklearn.model_selection import train_test_split
 
-modeldf=y.merge(MainDeckCards,left_on='index',right_index=True).reset_index(drop=True)
+modeldf = df.merge(MainDeckCards,left_index=True,right_index=True).reset_index(drop=True)
 #X = StandardScaler().fit_transform(modeldf[feature_list])
+modeldf = modeldf.loc[(modeldf['GoodDeck']==1) | (modeldf['GoodDeck']==0)]
+modeldf['GoodDeck'] = modeldf['GoodDeck'].apply(int)
 
-X_train, X_test, y_train, y_test = train_test_split(modeldf[feature_list], modeldf['Win'], test_size=0.25)
+X_train, X_test, y_train, y_test = train_test_split(modeldf[feature_list], modeldf['GoodDeck'], test_size=0.25)
 
 #from sklearn.linear_model import LogisticRegression
 #logmodel = LogisticRegression()
@@ -135,60 +126,55 @@ X_train, X_test, y_train, y_test = train_test_split(modeldf[feature_list], model
 from sklearn.ensemble import RandomForestClassifier
 
 # Instantiate model with 1000 decision trees
-rf = RandomForestClassifier()
+rf = RandomForestClassifier(n_estimators=400, min_samples_split=2, min_samples_leaf=2, max_features='sqrt', max_depth=60, bootstrap=True)
 
 # Train the model on training data
 rf.fit(X_train, y_train)
 
 pd.crosstab(y_test, rf.predict(X_test), rownames=['Actual'], colnames=['Predicted'])
 
-x = MainDeckCards
+feature_importances = pd.DataFrame(rf.feature_importances_,
+                                   index = X_train.columns,
+                                    columns=['importance']).sort_values('importance', ascending=False)
 
-from sklearn.decomposition import PCA
+# Number of trees in random forest
+n_estimators = [int(x) for x in np.linspace(start = 100, stop = 1000, num = 10)]
+# Number of features to consider at every split
+max_features = ['auto', 'sqrt']
+# Maximum number of levels in tree
+max_depth = [int(x) for x in np.linspace(10, 110, num = 11)]
+max_depth.append(None)
+# Minimum number of samples required to split a node
+min_samples_split = [2, 5, 10]
+# Minimum number of samples required at each leaf node
+min_samples_leaf = [1, 2, 4]
+# Method of selecting samples for training each tree
+bootstrap = [True, False]
 
-pca = PCA(n_components=2)
+from sklearn.model_selection import RandomizedSearchCV
+# Create the random grid
+random_grid = {'n_estimators': n_estimators,
+               'max_features': max_features,
+               'max_depth': max_depth,
+               'min_samples_split': min_samples_split,
+               'min_samples_leaf': min_samples_leaf,
+               'bootstrap': bootstrap}
 
-principalComponents = pca.fit_transform(x)
+# Use the random grid to search for best hyperparameters
+# First create the base model to tune
+rf = RandomForestRegressor()
+# Random search of parameters, using 3 fold cross validation, 
+# search across 100 different combinations, and use all available cores
+rf_random = RandomizedSearchCV(estimator = rf, param_distributions = random_grid, n_iter = 100, cv = 3, verbose=2, random_state=42, n_jobs = -1)
 
-principalDf = pd.DataFrame(data = principalComponents
-             , columns = ['principal component 1', 'principal component 2'])
+# Fit the random search model
+rf_random.fit(X_train, y_train)
 
-finalDf = pd.concat([principalDf, df[['ModuleInstanceData.WinLossGate.CurrentWins']]], axis = 1)
+rf_random.best_params_
 
-fig = plt.figure(figsize = (8,8))
-ax = fig.add_subplot(1,1,1) 
-ax.set_xlabel('Principal Component 1', fontsize = 15)
-ax.set_ylabel('Principal Component 2', fontsize = 15)
-ax.set_title('2 component PCA', fontsize = 20)
+rf = RandomForestClassifier(n_estimators=500)
 
-targets = [1, 2, 3, 4, 5, 6, 7]
-colors = ['red', 'orange', 'yellow', 'blue', 'green', 'purple', 'white']
-for target, color in zip(targets,colors):
-    indicesToKeep = finalDf['ModuleInstanceData.WinLossGate.CurrentWins'] == target
-    ax.scatter(finalDf.loc[indicesToKeep, 'principal component 1']
-               , finalDf.loc[indicesToKeep, 'principal component 2']
-               , c = color
-               , s = 50)
-ax.legend(targets)
-ax.grid()
+# Train the model on training data
+rf.fit(X_train, y_train)
 
-# Import your necessary dependencies
-from sklearn.feature_selection import RFE
-from sklearn.linear_model import LogisticRegression
-
-# Feature extraction
-model = LogisticRegression()
-rfe = RFE(model, 10)
-fit = rfe.fit(X_train, y_train)
-
-print("Num Features: %s" % (fit.n_features_))
-print("Selected Features: %s" % (fit.support_))
-print("Feature Ranking: %s" % (fit.ranking_))
-
-from sklearn.metrics import accuracy_score
-
-# Print the features and their ranking (high = dropped early on)
-print(dict(zip(X_train.columns, fit.ranking_)))
-print(X_train.columns[fit.support_])
-
-acc = accuracy_score(y_test, rfe.predict(X_test))
+pd.crosstab(y_test, rf.predict(X_test), rownames=['Actual'], colnames=['Predicted'])
