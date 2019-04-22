@@ -6,6 +6,7 @@ from pandas.io.json import json_normalize
 import json
 import numpy as np
 from MTGAToolFunctions import loaddatabase
+from sklearn.model_selection import train_test_split
 
 S = requests.Session()
 
@@ -36,7 +37,7 @@ for ii in range(200):
                     data={'token': token, 'filter_wcc': "", 'filter_wcu': "",
                           'filter_sortdir': 1, 'filter_type': '',
                           'filter_sort':"By Date", 'filter_skip':str(skip),
-                          'filter_owned':"false", 'filter_event':"QuickDraft_RNA_20190315",
+                          'filter_owned':"false", 'filter_event':"QuickDraft_GRN_20190412",
                           "filter_wcr":"", "filter_wcm":"", })
 
     data_this = result.json()
@@ -53,7 +54,7 @@ for ii in range(200):
 
     # download each deck / match result entry
     for entry in data_this['result']:
-        time.sleep(.25) # again, give the server a break
+        time.sleep(.2) # again, give the server a break
         deckid = entry['_id']
 
         course = S.post(url+"get_course.php", data={'token': token, 'courseid':deckid})
@@ -96,81 +97,21 @@ MainDeckCards=maindeck.pivot_table('quantity', ['DeckID'], 'name').fillna(0)
 MainDeckCards = MainDeckCards.astype(int)
 feature_list=list(MainDeckCards)
 
-from sklearn.model_selection import train_test_split
-
 modeldf = df.merge(MainDeckCards,left_index=True,right_index=True).reset_index(drop=True)
 #X = StandardScaler().fit_transform(modeldf[feature_list])
 modeldf = modeldf.loc[(modeldf['GoodDeck']==1) | (modeldf['GoodDeck']==0)]
 modeldf['GoodDeck'] = modeldf['GoodDeck'].apply(int)
 
-X_train, X_test, y_train, y_test = train_test_split(modeldf[feature_list], modeldf['GoodDeck'], test_size=0.25)
+X = modeldf[['CourseDeck.colors','playerRank']]
 
-#from sklearn.linear_model import LogisticRegression
-#logmodel = LogisticRegression()
-#logmodel.fit(X_train,y_train)
-#pd.crosstab(y_test, logmodel.predict(X_test), rownames=['Actual'], colnames=['Predicted'])
+X = X.merge(pd.get_dummies(X['playerRank']), left_index=True, right_index=True)
+X = X.merge(pd.get_dummies(X['CourseDeck.colors'].apply(str)), left_index=True, right_index=True)
+X = X.drop(columns=['CourseDeck.colors','playerRank'])
 
-#from sklearn.metrics import classification_report
-#print(classification_report(y_test,predictions))
-
-#%matplotlib inline
-#import matplotlib.pyplot as plt
-#plt.spy(logit)
-
-#from sklearn.decomposition import FactorAnalysis
-#factor = FactorAnalysis(1).fit(X)
-
-#df=pd.DataFrame(factor.components_)
+X_train, X_test, y_train, y_test = train_test_split(X, modeldf['GoodDeck'], test_size=0.25)
 
 # Import the model we are using
 from sklearn.ensemble import RandomForestClassifier
-
-# Instantiate model with 1000 decision trees
-rf = RandomForestClassifier(n_estimators=400, min_samples_split=2, min_samples_leaf=2, max_features='sqrt', max_depth=60, bootstrap=True)
-
-# Train the model on training data
-rf.fit(X_train, y_train)
-
-pd.crosstab(y_test, rf.predict(X_test), rownames=['Actual'], colnames=['Predicted'])
-
-feature_importances = pd.DataFrame(rf.feature_importances_,
-                                   index = X_train.columns,
-                                    columns=['importance']).sort_values('importance', ascending=False)
-
-# Number of trees in random forest
-n_estimators = [int(x) for x in np.linspace(start = 100, stop = 1000, num = 10)]
-# Number of features to consider at every split
-max_features = ['auto', 'sqrt']
-# Maximum number of levels in tree
-max_depth = [int(x) for x in np.linspace(10, 110, num = 11)]
-max_depth.append(None)
-# Minimum number of samples required to split a node
-min_samples_split = [2, 5, 10]
-# Minimum number of samples required at each leaf node
-min_samples_leaf = [1, 2, 4]
-# Method of selecting samples for training each tree
-bootstrap = [True, False]
-
-from sklearn.model_selection import RandomizedSearchCV
-# Create the random grid
-random_grid = {'n_estimators': n_estimators,
-               'max_features': max_features,
-               'max_depth': max_depth,
-               'min_samples_split': min_samples_split,
-               'min_samples_leaf': min_samples_leaf,
-               'bootstrap': bootstrap}
-
-# Use the random grid to search for best hyperparameters
-# First create the base model to tune
-rf = RandomForestRegressor()
-# Random search of parameters, using 3 fold cross validation, 
-# search across 100 different combinations, and use all available cores
-rf_random = RandomizedSearchCV(estimator = rf, param_distributions = random_grid, n_iter = 100, cv = 3, verbose=2, random_state=42, n_jobs = -1)
-
-# Fit the random search model
-rf_random.fit(X_train, y_train)
-
-rf_random.best_params_
 
 rf = RandomForestClassifier(n_estimators=500)
 
@@ -178,3 +119,5 @@ rf = RandomForestClassifier(n_estimators=500)
 rf.fit(X_train, y_train)
 
 pd.crosstab(y_test, rf.predict(X_test), rownames=['Actual'], colnames=['Predicted'])
+
+feature_imp = pd.Series(rf.feature_importances_,index=feature_list).sort_values(ascending=False)
