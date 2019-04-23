@@ -142,9 +142,7 @@ fig, axs = plot_partial_dependence(gbr, X=X_test, features=['Parhelion Patrol', 
 allpd = {}
 
 for i in range(len(feature_list)-1):
-    pd, values = partial_dependence(gbr, target_variables=i, X=X_test) 
-    allpd.update(dict(zip([feature_list[i]], pd.tolist())))
+    key, values = partial_dependence(gbr, target_variables=i, X=X_test) 
+    allpd.update(dict(zip([feature_list[i]], key.tolist())))
 
-pd.DataFrame(allpd)
-
-pd.DataFrame(d)
+df=pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in allpd.items() ]))
